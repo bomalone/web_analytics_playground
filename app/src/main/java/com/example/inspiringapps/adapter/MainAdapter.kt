@@ -1,6 +1,5 @@
 package com.example.inspiringapps.adapter
 
-import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.TextView
@@ -9,7 +8,7 @@ import com.example.inspiringapps.R
 import com.example.inspiringapps.model.Sequence
 
 
-class MainAdapter(private val resultsMap: Map<Sequence, Int>, private val context: Context) :
+class MainAdapter(private val resultsMap: Map<Sequence, Int>) :
     RecyclerView.Adapter<MainAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

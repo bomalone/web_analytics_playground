@@ -19,7 +19,6 @@ import java.net.URL
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-
 class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
 
     private lateinit var filename: String
@@ -31,6 +30,9 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         "^(\\S+) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(\\S+) (\\S+)\\s*(\\S+)?\\s*\" (\\d{3}) (\\S+)"
     private val pattern = Pattern.compile(regex)
 
+    /*
+    Fetch logs immediately, but allow the user to swipe refresh in the event of an updated .log file
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -40,18 +42,26 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         fetchUserLogs()
     }
 
-    private fun showResults(events: kotlin.collections.Map<Sequence, Int>) {
+    /*
+    This updates the recycler and hides the progress bar from the swipe refresh layout
+     */
+    private fun showResults(events: Map<Sequence, Int>) {
         //display the parsed results on the UI thread
         lifecycleScope.launch(Dispatchers.Main) {
             recycler.apply {
                 layoutManager = LinearLayoutManager(context)
-                adapter = MainAdapter(events, context)
+                adapter = MainAdapter(events)
             }
 
             refreshLayout.isRefreshing = false
         }
     }
 
+    /*
+    It would probably be best to use a repository pattern for this,
+    but I wanted to use some new fancy non-okhttp to get the file and
+    coroutines to handle the network/parsing/long operations
+     */
     private fun fetchUserLogs() {
         //download & parse the file on IO thread
         lifecycleScope.launch(Dispatchers.IO) {
@@ -66,9 +76,14 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
     }
 
 
+    /*
+    This gets each user's IP and the page they visited from the logs using our regular expression
+    We're parsing this way simply because we aren't working with any other easily deserializable data
+    like we could with Moshi/GSON. I suppose the regex is our custom deserializer.
+     */
     private fun extractEvents() {
         val it: LineIterator = FileUtils.lineIterator(File(filename))
-        try {
+        it.use { it ->
             val events: ArrayList<UserEvent> = ArrayList()
             while (it.hasNext()) {
                 val line = it.nextLine()
@@ -78,16 +93,14 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
                 }
             }
             parse(events)
-        } finally {
-            it.close()
         }
     }
 
     /*
-    so here, we want to get all of the pages that each unique user visited, in order
+    We want to get all of the pages that each unique user visited, in order
      */
     private fun parse(events: ArrayList<UserEvent>) {
-        var eventMap = HashMap<String, ArrayList<String>>()
+        val eventMap = HashMap<String, ArrayList<String>>()
 
         //generate an ordered list of each endpoint that each user visited
         for (event in events) {
@@ -103,22 +116,29 @@ class MainActivity : AppCompatActivity(), SwipeRefreshLayout.OnRefreshListener {
         showResults(generateCommonSequences(eventMap))
     }
 
-    private fun generateCommonSequences(events: HashMap<String, ArrayList<String>>): kotlin.collections.Map<Sequence, Int> {
-        var sequenceCountMap = LinkedHashMap<Sequence, Int>()
+    /*
+    There may be a more performant way of doing this.
+    This goes through each user's ordered activity and extracts 3 page sequences,
+     including overlap. For example, page visits A,B,C,D would create two sequences: A,B,C & B,C,D
+     */
+    private fun generateCommonSequences(events: HashMap<String, ArrayList<String>>): Map<Sequence, Int> {
+        val sequenceCountMap = LinkedHashMap<Sequence, Int>()
         events.forEach { (_, value) ->
-            for (i in 0 until value.size-2) { //offset is because we only want triples
-                val sequence = Sequence(                    value[i], value[i + 1], value[i + 2]
+            for (i in 0 until value.size - 2) { //offset is because we only want triples
+                val sequence = Sequence(
+                    value[i], value[i + 1], value[i + 2]
                 )
                 if (sequenceCountMap.containsKey(sequence)) {
                     sequenceCountMap[sequence] = sequenceCountMap[sequence]!!.plus(1)
                 } else {
-                    var count = 1
+                    val count = 1
                     sequenceCountMap[sequence] = count
                 }
             }
         }
 
-        return sequenceCountMap.entries.sortedByDescending { it.value }.associateBy({ it.key }, { it.value })
+        return sequenceCountMap.entries.sortedByDescending { it.value }
+            .associateBy({ it.key }, { it.value })
     }
 
     override fun onRefresh() {

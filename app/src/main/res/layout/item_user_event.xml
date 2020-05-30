@@ -17,7 +17,6 @@
             style="@style/header_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
             android:text="1" />
 
         <TextView
@@ -25,7 +24,6 @@
             style="@style/header_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/event2"
             android:text="2"
             app:layout_constraintTop_toBottomOf="@+id/event1" />
 
@@ -34,7 +32,6 @@
             style="@style/header_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/event3"
             android:text="3"
             app:layout_constraintTop_toBottomOf="@+id/event2" />
     </LinearLayout>

@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">InspiringApps Web Analytics</string>
+    <string name="count">%s events</string>
+</resources>

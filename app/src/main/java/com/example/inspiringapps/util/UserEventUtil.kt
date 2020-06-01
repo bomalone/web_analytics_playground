@@ -69,7 +69,7 @@ object UserEventUtil {
     /*
    We want to get all of the pages that each unique user visited, in order
     */
-    private fun parseLogFile(events: ArrayList<UserEvent>) : Map<Sequence, Int> {
+    fun parseLogFile(events: ArrayList<UserEvent>) : Map<Sequence, Int> {
         val eventMap = HashMap<String, ArrayList<String>>()
 
         //generate an ordered list of each endpoint that each user visited
